@@ -1,0 +1,1 @@
+benchmark /'bɛntʃmɑrk/ n. 基准
