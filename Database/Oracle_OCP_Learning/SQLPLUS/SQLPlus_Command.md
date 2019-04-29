@@ -82,3 +82,82 @@ SQL> list
 ## start (fname) 读入到buf中并执行
 
 
+## & 定义临时变量(传值)
+
+```
+SQL> select ename,sal from emp where empno=&e;
+(定义临时变量)
+
+Enter value for e: 7788
+
+SQL> /
+(可反复调用)
+```
+
+## && - 变量的引用
+```
+SQL> select &&e,ename,sal from emp where &e=7900;
+
+Enter value for e: empno
+```
+
+## define [变量] - 定义临时变量
+```
+SQL> define e=7902;
+
+SQL> select ename,sal from emp where empno=&e;
+
+```
+
+## undefine [变量]
+取消临时变量的定义
+
+```
+SQL> undefine e
+```
+
+## var[iable] [变量]
+定义一个 sql 可调用的变量
+
+```
+SQL> var v1 number
+SQL> exec :v1 :=7900
+PL/SQL procedure successfully completed.
+
+SQL> select ename,sal from emp where empno=:v1;
+ENAME     SAL
+------  ------
+JAMES       950
+```
+
+## show
+
+```
+SQL> show all
+<查看所有变量设置情况>
+```
+
+## set
+```
+SQL> show timing
+timing off
+
+SQL> set timing on
+<显示执行SQL语句所用时间>
+
+SQL> ***
+...
+Elapsed: 00:00:00:00
+
+```
+
+
+<上述方式为临时设置，若要永久修改>
+**vi login.sql**
+
+```
+define _editor='vi'
+set timing on
+```
+
+
