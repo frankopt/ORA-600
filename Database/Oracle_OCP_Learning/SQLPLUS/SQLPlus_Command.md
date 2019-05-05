@@ -1,5 +1,8 @@
 # SQLPLUS 常用命令
 
+本机上没有装Database，但是装有 SQLPlus，可以连接远程的数据库。
+
+
 1. show user - 显示当前用户
 2. select * from tab; - 显示表
 
@@ -158,6 +161,36 @@ Elapsed: 00:00:00:00
 ```
 define _editor='vi'
 set timing on
+```
+
+* set heading off/on 列标题
+* set feedback off/on 行返回值
+* set pagesize 0/n 行数
+* set linesize n 行的长度
+* set newpage 1/n/none 返回值行间隔
+* set null text
+* set numformat format
+* set numwidth 10/n
+* set autocommit 事物自动提交
+* set long
+* set timing on/off
+* set autotrace
+* set array
+
+## col
+COL[UMN] [{column | expr} [option...]]
+
+```
+SQL> col dname heading 'deptpartment | name'
+
+SQL> select * from dept;
+
+DEPTNO    deptpartment  LOC
+              name
+    10    ACCOUNTING    NEW YORK
+    20    RESEARCH      DALLAS
+    30    SALES         CHICAGO
+
 ```
 
 
