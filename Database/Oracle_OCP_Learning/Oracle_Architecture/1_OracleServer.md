@@ -5,7 +5,10 @@
 * 逻辑存储与物理存储
 * ASM
 
+![](https://ws2.sinaimg.cn/large/006tNc79gy1g2v6gof5znj30je0bc7d0.jpg)
 
+
+![](https://ws4.sinaimg.cn/large/006tNc79gy1g2qjbhndl9j30h20bojt2.jpg)
 
 
 | Oracle Server |  |  |
