@@ -1,4 +1,4 @@
-# 用户进程
+# 用户进程：用于连接到Oracle DB 
 
 ![](https://ws4.sinaimg.cn/large/006tNc79gy1g2qj7ubjzij30q00idk5w.jpg)
 
