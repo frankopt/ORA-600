@@ -77,3 +77,55 @@ export SRVCTL_TRACEFILE=srvctl_`date +%Y-%m-%d-%H-%M-%S`
 ```
 
 ## Troubleshoot the Oracle Cluster Registry file
+
+
+| OCR Tools |  |
+| --- | --- |
+|  | ocrdump |
+|  | ocrcheck |
+|  | ocrconfig |
+|  | srvctl |
+
+* ocrdump
+
+```
+Name:
+        ocrdump - Dump contents of Oracle Cluster/Local Registry to a file.
+Synopsis:
+        ocrdump [-local] [<filename>|-stdout] [-backupfile <backupfilename>] [-keyname <keyname>] [-xml] [-noheader]
+Description:
+        Default filename is OCRDUMPFILE. Examples are:
+        prompt> ocrdump
+        writes cluster registry contents to OCRDUMPFILE in the current directory
+        prompt> ocrdump MYFILE
+        writes cluster registry contents to MYFILE in the current directory
+        prompt> ocrdump -stdout -keyname SYSTEM
+        writes the subtree of SYSTEM in the cluster registry to stdout
+        prompt> ocrdump -local -stdout -xml
+        writes local registry contents to stdout in xml format
+        prompt> ocrdump -backupfile /oracle/CRSHOME/backup.ocr -stdout -xml
+        writes registry contents in the backup file to stdout in xml format
+Notes:
+        * The header information will be retrieved based on best effort basis.
+        * Use option '-local' to indicate that the operation is to be performed on the Oracle Local Registry.
+```
+
+* ocrcheck
+
+```
+# ocrcheck
+Status of Oracle Cluster Registry is as follows :
+         Version                  :          4
+         Total space (kbytes)     :     491684
+         Used space (kbytes)      :      86884
+         Available space (kbytes) :     404800
+         ID                       : 1817734379
+         Device/File Name         :      +DATA
+                                    Device/File integrity check succeeded
+                                    Device/File not configured
+                                    Device/File not configured
+                                    Device/File not configured
+                                    Device/File not configured
+         Cluster registry integrity check succeeded
+         Logical corruption check succeeded
+```
