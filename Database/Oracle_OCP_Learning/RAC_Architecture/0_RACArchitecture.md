@@ -102,3 +102,49 @@ cat /scratch/oracle/CrsHome/gpnp/profiles/peer/profile.xml
 
 ### SCAN (Single Client Access Name)
 is the address used by clients connecting to the cluster
+
+### 集群数据库的访问 gv$
+
+```
+$ dsql  < ---- 连接本机数据库，而不是集群数据库
+SQL*Plus: Release 20.0.0.0.0 - Development on Wed May 15 17:06:15 2019
+Version 20.1.0.0.0
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+Connected to:
+Oracle Database 20c Enterprise Edition Release 20.0.0.0.0 - Development
+Version 20.1.0.0.0
+
+SQL> select name from v$database;
+NAME
+---------
+ORCL
+
+SQL> select instance_name from gv$instance;
+INSTANCE_NAME
+----------------
+orcl1
+orcl2
+
+SQL> show parameter thread
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+ofs_threads                          integer     4
+parallel_threads_per_cpu             integer     1
+thread     (线程号)                   integer     1
+threaded_execution                   boolean     FALSE
+
+线程号=1，此节点线程编号均为1 
+# ps -ef | grep pmon
+crsusr    1181     1  0 May04 ?        00:05:31 ios_pmon_+IOS1
+crsusr    1675     1  0 May04 ?        00:00:54 asm_pmon_+ASM1
+root      2255 29246  0 17:11 pts/7    00:00:00 grep --color=auto pmon
+crsusr    8054     1  0 May04 ?        00:00:51 apx_pmon_+APX1
+crsusr   10654     1  0 May04 ?        00:01:42 mdb_pmon_-MGMTDB
+racusr   28784     1  0 May09 ?        00:00:34 ora_pmon_orcl1
+
+SQL> show parameter undo_t
+NAME                                 TYPE        VALUE
+------------------------------------ ----------- ------------------------------
+undo_tablespace                      string      UNDOTBS1
+
+```
