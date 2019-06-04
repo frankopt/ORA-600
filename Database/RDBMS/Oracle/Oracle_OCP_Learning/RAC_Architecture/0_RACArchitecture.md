@@ -1,27 +1,57 @@
 # RAC (Real Application Cluster) 架构
 
-![](https://ws1.sinaimg.cn/large/006tNc79gy1g2wluvuhekj30se0l2433.jpg)
 
-## 概述 What is Cluster?
-集群：多台服务器提供一种 高可用、高性能、负载均衡、动态管理的功能。
+## 1 What is RAC?
 
-包含RAC选件的Oracle数据库允许依托一组共享的数据库，在集群中的不同服务器上运行多个数据库实例。该数据库跨越多个硬件系统，但是在应用程序看来，它是一个统一的数据库。
+依托一组共享的数据库，在集群中的不同服务器上运行多个数据库实例。该数据库跨越多个硬件系统，但是在应用程序看来，它是一个统一的数据库。
 这样就能利用商用硬件降低总拥有成本并为支持各种应用程序负载提供一个可伸缩的计算环境。
 
-* Oracle RAC 是 Oracle首要的共享磁盘数据库集群技术。
+## 2 Why RAC?
+1. 数据库 数据量和访问量 快速增长，单一设备无法承担。
+2. 单硬件的升级有性能天花板，通过几个中小服务器组件集群，可实现数据库的持续扩展和负载均衡。
+3. 单节点故障下，集群系统可转移故障节点应用数据，实现高可用。
+4. 实现数据冗余备份。
 
 ![](http://ww2.sinaimg.cn/large/006tNc79gy1g3p4dwevtqj30cd0a4dit.jpg)
 
-## Oracle Clusterware <集群>
-* key part of Oracle_GI
-* integrated with Oracle_ASM
-* the basis for ACFS
-* a foundation for Oracle RAC
+## 3 市面上的数据库集群产品
+* 基于数据库引擎：
+    * Oracle RAC
+    * AWS EC2
+    * Microsoft MSCS
+    * IBM DB2UDB
+    * Sybase ASE
 
-Shared Disk 要求 能够 1 load balance 负载均衡 2 failover
-没有ASM的情况下，RAID
+* 基于数据库网关（中间件）：
+    * ICX-UDS
 
-## 1 Oracle Clusterware Networking
+## 4 Oracle RAC 概述
+Oracle RAC的核心是共享磁盘子系统，集群中所有节点必须能够访问所有数据、重做日志文件、控制文件和参数文件。
+
+RAC 为Oracle数据库提供了最高级别的可用性、可伸缩性和低成本计算能力。如果集群内的一个节点发生故障，Oracle可以在其余节点上继续运行。
+
+Key Feature：**Cache Fusion 缓存融合**
+缓存融合使得节点通过集群互联同步其 高速缓存，从而最大限度地低降低磁盘 I/O。
+ - - - Oracle 是唯一具备这一能力的数据库厂商
+
+> Cache Fusion 就是通过互联网络（高速的 Private interconnect）在集群内各节点的 SGA 之间进行块传递，这是RAC最核心的工作机制，他把所有实例的SGA虚拟成一个大的SGA区，每当不同的实例请求相同的数据块时，这个数据块就通过 Private interconnect 在实例间进行传递。以避免首先将块推送到磁盘，然后再重新读入其他实例的缓存中这样一种低效的实现方式(OPS 的实现)。当一个块被读入 RAC 环境中某个实例的缓存时，该块会被赋予一个锁资源（与行级锁不同），以确保其他实例知道该块正在被使用。之后，如果另一个实例请求该块的一个副本，而该块已经处于前一个实例的缓存内，那么该块会通过互联网络直接被传递到另一个实例的 SGA。如果内存中的块已经被改变，但改变尚未提交，那么将会传递一个 CR 副本。这就意味着只要可能，数据块无需写回磁盘即可在各实例的缓存之间移动，从而避免了同步多实例的缓存所花费的额外 I/O。很明显，不同的实例缓存的数据可以是不同的，也就是在一个实例要访问特定块之前，而它又从未访问过这个块，那么它要么从其他实例 cache fusion 过来，或者从磁盘中读入。GCS（Global Cache Service，全局内存服务）和 GES（Global EnquenceService，全局队列服务）进程管理使用集群节点之间的数据块同步互联。
+
+
+## 5 RAC 体系结构
+![](https://ws1.sinaimg.cn/large/006tNc79gy1g2wluvuhekj30se0l2433.jpg)
+
+#### 5.1 Oracle Clusterware Architecture
+一个RAC Cluster包含：
+    1. >= 2个节点
+    2. private network - 处理节点间通信 与 cache fusion
+    3. public network - 客户端和应用 访问
+    4. shared storage
+
+
+#### 5.2 Oracle Clusterware Networking
+
+集群各节点之间通过 心跳线 互联，通过心跳确定 成员信息、在某个时间点的运行状况，保证集群的正常运行。
+
 ![](https://ws4.sinaimg.cn/large/006tNc79ly1g2wma1s2rtj30ff07mdg5.jpg)
 
 * 每个节点至少 2 个 network adapter
@@ -31,7 +61,13 @@ Shared Disk 要求 能够 1 load balance 负载均衡 2 failover
 NAS（network attached storage）
 iSCSI
 
-## 2 Oracle Clusterware Architecture
+当一个客户端发送请求到某一台服务器的listener之后，这台服务器根据load balance策略，会把请求发送给本机的RAC组件处理。
+
+##### 5.2.1 private network
+private network 通常是用千兆以太网构建，每个集群节点通过专用高速网络连接到所有其他节点。
+Oracle Cache Fusion 技术使用这种网络将每个主机的物理内存 (RAM) 有效地组合成一个高速缓存。某个 Oracle 实例高速缓存中存储的数据允许其他实例访问，还通过在集群节点中传输锁定和其他同步信息保持数据完整性和高速缓存一致性。
+
+#### 5.3 Oracle Clusterware 后台进程
 
 init daemon.
 
@@ -51,8 +87,7 @@ init daemon.
 * gipcd.bin: 对应于-init中的ora.gipcd资源
 * gpnpd.bin: 对应于-init中的ora.gpnpd资源，Grid Plugin and Play即插即用，负责node的身份验证，里面保存了这个cluster的所有node的map信息以及ASM的discovery_string和cluster_interconnect，用于添加和删除节点。如果没有成功启动的话，后面的整个stack就都启不来了。对于Rim node来说，Hub node会将GPnP profile的信息注册到GNS中去，Rim node通过GNS anchor来获取GPnP profile的信息。
 * mdnsd.bin: 对应于-init中的ora.mdnsd资源
-* ora.storage：因为ora.crsd -init并不非得依赖于本地的ASM，所以引入了一个ora.storage资源，表示只要这个cluster-wide的范围内能够访问到ASM disk即可。ora.storage的主要任务就是确保OCR能够访问，如果OCR放在ASM上面，只要确保loca ASM instance running。在第一个node上面，先起ora.asm -init资源，再起ora.storage资源；在其他node上面，先起ora.storage资源，再起ora.asm -init资源。如果ora.storage资源被disable掉了，那么，正在运行的GI stack不会受到任何影响，因为一旦ora.storage起来了，它的使命就完成了，CRSD就会自己去和ASM instance去通信了；但是，下次GI stack启动就无法起来了，“ora.asm -init”资源和ASM instance自己可以起来，但是ora.crsd却起不来，这是因为ora.crsd的启动依赖于ora.storage。
-如果disable了第二个Hub的ora.storage，重启这个Hub上面的GI stack，它上面的ora.ctssd、“ora.asm -init”和ocssd.bin都可以起来，但是ora.crsd/crsd.bin和ora.storage都起不来了，Local ASM instance也根本不会尝试启动的。
+* ora.storage：因为ora.crsd -init并不非得依赖于本地的ASM，所以引入了一个ora.storage资源，表示只要这个cluster-wide的范围内能够访问到ASM disk即可。ora.storage的主要任务就是确保OCR能够访问，如果OCR放在ASM上面，只要确保loca ASM instance running。在第一个node上面，先起ora.asm -init资源，再起ora.storage资源；在其他node上面，先起ora.storage资源，再起ora.asm -init资源。如果ora.storage资源被disable掉了，那么，正在运行的GI stack不会受到任何影响，因为一旦ora.storage起来了，它的使命就完成了，CRSD就会自己去和ASM instance去通信了；但是，下次GI stack启动就无法起来了，“ora.asm -init”资源和ASM instance自己可以起来，但是ora.crsd却起不来，这是因为ora.crsd的启动依赖于ora.storage。如果disable了第二个Hub的ora.storage，重启这个Hub上面的GI stack，它上面的ora.ctssd、“ora.asm -init”和ocssd.bin都可以起来，但是ora.crsd/crsd.bin和ora.storage都起不来了，Local ASM instance也根本不会尝试启动的。
 
 ```
 
@@ -94,7 +129,15 @@ ora.storage
       1        ONLINE  ONLINE       rws00cre                 STABLE
 ```
 
-### GPnP Profile
+#### 5.4 RAC 共享存储
+OCR 和 Votedisk 以及数据文件都需要放到共享存储中。
+
+
+-------
+
+#### 5.5 RAC 相关组件
+
+##### 5.5.1 GPnP Profile
 
 ![](https://ws2.sinaimg.cn/large/006tNc79gy1g2xeqnjbsdj30r40jgjvx.jpg)
 
@@ -104,13 +147,56 @@ cat /scratch/oracle/CrsHome/gpnp/profiles/peer/profile.xml
 <?xml version="1.0" encoding="UTF-8"?><gpnp:GPnP-Profile Version="1.0" xmlns="http://www.grid-pnp.org/2005/11/gpnp-profile" xmlns:gpnp="http://www.grid-pnp.org/2005/11/gpnp-profile" xmlns:orcl="http://www.oracle.com/gpnp/2005/11/gpnp-profile" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.grid-pnp.org/2005/11/gpnp-profile gpnp-profile.xsd" ProfileSequence="6" ClusterUId="c5f6b0b50aa06ff0ffeb5544adf4e873" ClusterName="rws00cr-cluster" PALocation=""><gpnp:Network-Profile><gpnp:HostNetwork id="gen" HostName="*"><gpnp:Network id="net1" IP="10.214.64.0" Adapter="eth0" Use="public"/><gpnp:Network id="net2" IP="10.196.0.0" Adapter="eth1" Use="asm,cluster_interconnect"/></gpnp:HostNetwork></gpnp:Network-Profile><orcl:CSS-Profile id="css" DiscoveryString="+asm" LeaseDuration="400"/><orcl:ASM-Profile id="asm" DiscoveryString="/dev/fdisk/,AFD:*" SPFile="+DATA/rws00cr-cluster/ASMPARAMETERFILE/registry.253.1007389541" Mode="remote" Extended="false"/><orcl:BC-BigCluster id="bc" DiscoveryVIP="rws00crecrh-g"/><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><ds:Reference URI=""><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"> <InclusiveNamespaces xmlns="http://www.w3.org/2001/10/xml-exc-c14n#" PrefixList="gpnp orcl xsi"/></ds:Transform></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>coc6ZrlXHhQkXFnNo9E2Nq9dIfk=</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>bdJHdBfNuJwYgz/aNAHAbxDvMyLAtBDazJwaxFZ2LAS0Q9ahqRTC92FYob5HD/DyXzp7J4zH6VLX83QAYkkylMg8DPnT4RXw0BWZlNiBVAkX6Z7fsoutSCCj1LZ5PnulHCmeyoJpf6HAYC643N9VjnGEnEqQFdqQ2w9SMIASvFc=</ds:SignatureValue></ds:Signature></gpnp:GPnP-Profile>
 ```
 
-### GNS (Grid Naming Service) 
+##### 5.5.2 GNS (Grid Naming Service) 
 
 
-### SCAN (Single Client Access Name)
+##### 5.5.3 SCAN (Single Client Access Name)
 is the address used by clients connecting to the cluster
 
-### 集群数据库的访问 gv$
+##### 5.5.4 OCR （Oracle Cluster Registry ）
+The OCR contains cluster and database configuration information for RAC and Cluster Ready Services (CRS) such as the cluster node list, and cluster database instances to node mapping, and CRS application resource profiles.  The OCR is a shared file located in a cluster file system.  
+
+* 大小通常是 100M - 1G
+* OCR最多只能有2个。Primary OCR and Mirror OCR，两个OCR磁盘互为镜像，以防止OCR磁盘的单点故障
+
+```
+1. 校验OCR文件
+# ocrcheck
+Status of Oracle Cluster Registry is as follows :
+         Version                  :          4
+         Total space (kbytes)     :     491684
+         Used space (kbytes)      :      86572
+         Available space (kbytes) :     405112
+         ID                       : 1882045584
+         Device/File Name         :      +DATA    <-- OCR (primary)
+                                    Device/File integrity check succeeded
+                                    Device/File not configured <-- OCR Mirror (not configured)
+                                    Device/File not configured
+                                    Device/File not configured
+                                    Device/File not configured
+         Cluster registry integrity check succeeded
+         Logical corruption check succeeded
+
+2. GI安装过程中，会提示用户指定OCR安装位置，此位置记录在如下文件中
+# more /etc/oracle/ocr.loc
+#Device/file +DATA getting replaced by device +DATA/rws00cr-cluster/OCRFILE/registry.255.1009179037
+ocrconfig_loc=+DATA/rws00cr-cluster/OCRFILE/registry.255.1009179037
+local_only=false
+```
+
+
+##### 5.5.5 Voting Disk
+Voting Disk 这个文件主要用于记录节点成员状态，在出现脑裂时，决定那个 Partion 获得控制权，其他的Partion 必须从集群中剔除。在安装 Clusterware 时也会提示指定这个位置。
+
+```
+# crsctl query css votedisk
+##  STATE    File Universal Id                File Name Disk group
+--  -----    -----------------                --------- ---------
+ 1. ONLINE   706feb81507a4fd7bf3d981e4e920d4a (AFD:DATA1) [DATA]
+Located 1 voting disk(s).
+```
+
+## 6 集群数据库的访问 gv$
 
 ```
 $ dsql  < ---- 连接本机数据库，而不是集群数据库
@@ -156,7 +242,7 @@ undo_tablespace                      string      UNDOTBS1
 
 ```
 
-## 瓶颈 和 限制
+## 7 RAC 瓶颈 和 限制
 * 优点
 ORACLE RAC是目前市面上真正唯一做到并行模式的集群，RAC的所有集群成员都可以同时接收客户端请求，这样我们将能使用较低廉的服务器来实现高可用性、高吞吐量的集群环境，这要比通过对某台高端服务器增加硬件实现高可用性、高吞吐量花费的成本低很多。
 
@@ -167,5 +253,6 @@ ORACLE RAC是目前市面上真正唯一做到并行模式的集群，RAC的所�
 
 
 
-
+## 参考文档
+[RAC相关基础知识](https://www.cnblogs.com/lhrbest/p/7076782.html)
 
