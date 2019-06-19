@@ -2,12 +2,20 @@
 Cloud computing is the on-demand delivery of compute power, database storage, applications, and other IT resources through a cloud services platform via the internet with pay-as-you-go pricing.
 云计算是通过 Internet 按需提供计算能力、数据库存储、应用程序和其他 IT 资源，采用按使用量付费的定价模式。
 
+<一种规模经济模式，将专业的硬件设备（服务器、网络设备、存储设备）聚集在一起，使用软件将这些硬件设备逻辑隔离成一个个单间，按照单元租售给客户。>
+
 # cloud 的优势
 
 1. 敏捷性
 2. 可扩展性
 3. 在几分钟内进行全局部署
 4. 节省成本
+
+**问题1:   Cloud Computing会淘汰所有的传统的企业网络吗？**
+云计算归根到底是一种共享经济模式，很受中小企业喜欢，但是更多的大型企业还是喜欢公司自建的基础机构，
+
+* 完全自主控制软硬件
+* 基于信息安全的考量，信息的价值要远远比设备本身值钱
 
 # 云计算模型
 云计算的模型主要有三种。每种模型代表着云计算堆栈的一个独特部分。
