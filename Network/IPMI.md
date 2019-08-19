@@ -43,6 +43,7 @@ ipmitool user set password 2 chenshake
 我尝试添加用户，是没问题，不过无法给用户设置管理员权限。这个问题以后慢慢解决。
 设置IPMI ip 地址
 
+
 ```
 # ipmitool lan set 1 ipsrc dhcp
 # ipmitool lan print 1
